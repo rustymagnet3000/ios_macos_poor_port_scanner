@@ -8,10 +8,20 @@
 
 /* Begin PBXBuildFile section */
 		0FC07F3725AF0D0E00391120 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 0FC07F3625AF0D0E00391120 /* main.m */; };
+		0FC07F4725AF494500391120 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 0FC07F4625AF494500391120 /* main.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		0FC07F3125AF0D0E00391120 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		0FC07F4225AF494500391120 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -25,11 +35,19 @@
 /* Begin PBXFileReference section */
 		0FC07F3325AF0D0E00391120 /* ios_macos_port_scanner */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ios_macos_port_scanner; sourceTree = BUILT_PRODUCTS_DIR; };
 		0FC07F3625AF0D0E00391120 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		0FC07F3E25AF0DA400391120 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../../README.md; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.markdown; };
+		0FC07F4425AF494500391120 /* c_ios_macos_port_scanner */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = c_ios_macos_port_scanner; sourceTree = BUILT_PRODUCTS_DIR; };
+		0FC07F4625AF494500391120 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0FC07F3025AF0D0E00391120 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0FC07F4125AF494500391120 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -42,7 +60,8 @@
 		0FC07F2A25AF0D0E00391120 = {
 			isa = PBXGroup;
 			children = (
-				0FC07F3525AF0D0E00391120 /* ios_macos_port_scanner */,
+				0FC07F3525AF0D0E00391120 /* objc__port_scanner */,
+				0FC07F4525AF494500391120 /* c__port_scanner */,
 				0FC07F3425AF0D0E00391120 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -51,17 +70,25 @@
 			isa = PBXGroup;
 			children = (
 				0FC07F3325AF0D0E00391120 /* ios_macos_port_scanner */,
+				0FC07F4425AF494500391120 /* c_ios_macos_port_scanner */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		0FC07F3525AF0D0E00391120 /* ios_macos_port_scanner */ = {
+		0FC07F3525AF0D0E00391120 /* objc__port_scanner */ = {
 			isa = PBXGroup;
 			children = (
 				0FC07F3625AF0D0E00391120 /* main.m */,
-				0FC07F3E25AF0DA400391120 /* README.md */,
 			);
-			path = ios_macos_port_scanner;
+			path = objc__port_scanner;
+			sourceTree = "<group>";
+		};
+		0FC07F4525AF494500391120 /* c__port_scanner */ = {
+			isa = PBXGroup;
+			children = (
+				0FC07F4625AF494500391120 /* main.c */,
+			);
+			path = c__port_scanner;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -84,6 +111,23 @@
 			productReference = 0FC07F3325AF0D0E00391120 /* ios_macos_port_scanner */;
 			productType = "com.apple.product-type.tool";
 		};
+		0FC07F4325AF494500391120 /* c_ios_macos_port_scanner */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0FC07F4825AF494500391120 /* Build configuration list for PBXNativeTarget "c_ios_macos_port_scanner" */;
+			buildPhases = (
+				0FC07F4025AF494500391120 /* Sources */,
+				0FC07F4125AF494500391120 /* Frameworks */,
+				0FC07F4225AF494500391120 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = c_ios_macos_port_scanner;
+			productName = c_ios_macos_port_scanner;
+			productReference = 0FC07F4425AF494500391120 /* c_ios_macos_port_scanner */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -93,6 +137,9 @@
 				LastUpgradeCheck = 1220;
 				TargetAttributes = {
 					0FC07F3225AF0D0E00391120 = {
+						CreatedOnToolsVersion = 12.2;
+					};
+					0FC07F4325AF494500391120 = {
 						CreatedOnToolsVersion = 12.2;
 					};
 				};
@@ -111,6 +158,7 @@
 			projectRoot = "";
 			targets = (
 				0FC07F3225AF0D0E00391120 /* ios_macos_port_scanner */,
+				0FC07F4325AF494500391120 /* c_ios_macos_port_scanner */,
 			);
 		};
 /* End PBXProject section */
@@ -121,6 +169,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				0FC07F3725AF0D0E00391120 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0FC07F4025AF494500391120 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0FC07F4725AF494500391120 /* main.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -258,6 +314,26 @@
 			};
 			name = Release;
 		};
+		0FC07F4925AF494500391120 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2N3CU4HVH8;
+				ENABLE_HARDENED_RUNTIME = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		0FC07F4A25AF494500391120 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2N3CU4HVH8;
+				ENABLE_HARDENED_RUNTIME = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -275,6 +351,15 @@
 			buildConfigurations = (
 				0FC07F3B25AF0D0E00391120 /* Debug */,
 				0FC07F3C25AF0D0E00391120 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0FC07F4825AF494500391120 /* Build configuration list for PBXNativeTarget "c_ios_macos_port_scanner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0FC07F4925AF494500391120 /* Debug */,
+				0FC07F4A25AF494500391120 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

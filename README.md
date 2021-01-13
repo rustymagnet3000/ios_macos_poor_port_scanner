@@ -1,17 +1,34 @@
-# ios_macos_ poor_man's_port_scanner
+# iOS and macOS Port Scanner
 Port Scanner for iOS and macOS
 
 
 ### The Name of an Operation
 Setup one:
 
-- Found Open Ports are stored in a Class NSMutableArray ( singleton ) 
+- Found Open Ports are stored in a Class NSMutableArray ( singleton )
 - Class inherits from NSOperation
 - The Class represents the smallest unit of work ( the Operation )
 - Each Operation is added to a single NSOperationQueue
 -After each Operation is finished, it publishes a Notification
 - `[queue setMaxConcurrentOperationCount:5];`  makes it multi-threaded
 
+
+
+Language  |Threads |Time
+--|---|--
+Objective-C queued | 5  | 15 seconds  
+Python queued   |  3 |  14 seconds
+  |   |  
+
+##### Option 1
+/********************************************************************************/
+/*   Found Open Ports are stored in a Class NSMutableArray ( singleton )        */
+/*   Class inherits from NSOperation                                            */
+/*   The Class represents the smallest unit of work ( the Operation )           */
+/*   Each Operation is added to a single NSOperationQueue                       */
+/*   After each Operation is finished, it publishes a Notification              */
+/*   [queue setMaxConcurrentOperationCount:5];  makes it multi-threaded         */
+/********************************************************************************/
 
 ##### Results
 A Thread has no permanent linkage to an NSOperation.
@@ -26,7 +43,7 @@ do {
     operation.name = animalNames.lastObject;
     [animalNames removeLastObject];
 ```
-This causes this:
+This causes:
 ```
 [*]14 port done. Baboon:🐝0xac7373
 [*]10 port done. Lion:🐝0xac736f
@@ -50,7 +67,15 @@ This causes this:
 [*]29 port done. (null):🐝0xac7371
 Open Ports (
     22
-) 
+)
 
 Finished in: 0.005 seconds
 ```
+### What about
+`NSStream`          -> complex, when I only want to check whether a `port` is `open`.
+`NSSocketPort` -> only available on `macOS`.
+
+
+### Design
+`TCP Half Open` scan ( for speed)
+`TCP Connect` for complete `TCP connection`

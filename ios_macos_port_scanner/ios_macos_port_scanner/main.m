@@ -21,8 +21,8 @@
 /********************************************************************************/
 
 static NSString *YDhostname = @"127.0.0.1";
-static NSUInteger YDstartPort = 10;
-static NSUInteger const YDendPort = 30;
+static NSUInteger YDstartPort = 0;
+static NSUInteger const YDendPort = 2000;
 
 @interface YDOperation : NSOperation
 
@@ -32,12 +32,22 @@ static NSUInteger const YDendPort = 30;
 @property (nonatomic, assign) NSUInteger port;
 @property (nonatomic, assign)  BOOL isExecuting, isFinished;
 @property (class, nonatomic, strong) NSMutableArray *openPorts;
+@property (class, nonatomic, strong) NSMutableArray *usedThreads;
 
 @end
 
 @implementation YDOperation
 
 static NSMutableArray *_openPorts;
+static NSMutableArray *_usedThreads;
+
++ (NSMutableArray *)usedThreads{
+   return _usedThreads;
+}
+
++(void)setUsedThreads:(NSMutableArray *)usedThreads{
+    _usedThreads = usedThreads;
+}
 
 + (NSMutableArray *)openPorts{
    return _openPorts;
@@ -50,7 +60,10 @@ static NSMutableArray *_openPorts;
 - (void) setNotification {
     [[NSNotificationCenter defaultCenter] addObserverForName:@"foobar" object:self queue:nil usingBlock:^(NSNotification *note)
      {
-        NSLog (@"[*]%lu port done. %@:%@", (unsigned long)self.port, self.name, [self getThreadID]);
+        // NSMutable Array is not thread safe. It crashes. Added a synchronize wrapper.
+        @synchronized(_usedThreads) {
+            [_usedThreads addObject:[self getThreadID]];
+        }
      }];
 }
 
@@ -97,7 +110,7 @@ static NSMutableArray *_openPorts;
 - (NSString *)getThreadID{
     uint64_t tid;
     pthread_threadid_np(NULL, &tid);
-    NSString *tidStr = [[NSString alloc] initWithFormat:@"🐝%#08x", (unsigned int) tid];
+    NSString *tidStr = [[NSString alloc] initWithFormat:@"%#08x", (unsigned int) tid];
     return tidStr;
 }
 @end
@@ -105,36 +118,27 @@ static NSMutableArray *_openPorts;
 int main() {
     @autoreleasepool {
         
-        NSMutableArray *animalNames = [NSMutableArray arrayWithObjects:     @"Dog",
-                                                                            @"Cat",
-                                                                            @"Baboon",
-                                                                            @"Scorpion",
-                                                                            @"Ant",
-                                                                            @"Fish",
-                                                                            @"Lion",
-                                                                            nil
-                                                                            ];
         NSDate *startTime = [NSDate date];
+        [YDOperation setOpenPorts: [NSMutableArray array]];
+        [YDOperation setUsedThreads:[NSMutableArray array]];
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];
         [queue setMaxConcurrentOperationCount:5];
-        [YDOperation setOpenPorts: [NSMutableArray array]];
         
         do {
             YDOperation *operation = [[YDOperation alloc] init:YDstartPort];
             operation.queuePriority = NSOperationQueuePriorityNormal;
             operation.qualityOfService = NSOperationQualityOfServiceUserInteractive;
-            operation.name = animalNames.lastObject;
-            [animalNames removeLastObject];
             [queue addOperation:operation];
             [operation setNotification];
             YDstartPort++;
         } while (YDstartPort < YDendPort);
         
         [queue waitUntilAllOperationsAreFinished];
-        
         NSTimeInterval difference = [[NSDate date] timeIntervalSinceDate:startTime];
-        
         NSLog(@"Open Ports %@ %@", [YDOperation openPorts], [NSString stringWithFormat:@"\n\nFinished in: %.3f seconds\n", difference]);
+        NSCountedSet *set = [[NSCountedSet alloc] initWithArray:[YDOperation usedThreads]];
+        for (id t in set)
+            NSLog(@"Thread=%@, Count=%lu", t, (unsigned long)[set countForObject:t]);
     }
 
     return 0;

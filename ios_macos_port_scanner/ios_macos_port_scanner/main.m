@@ -1,7 +1,4 @@
 @import Foundation;
-#include <err.h>
-#import <errno.h>
-#import <netdb.h>
 #import <arpa/inet.h>
 #include <pthread.h>
 
@@ -11,28 +8,27 @@
 #define NSLog(...) {}
 #endif
 
-/********************************************************************************/
-/*   Found Open Ports are stored in a Class NSMutableArray ( singleton )        */
-/*   Class inherits from NSOperation                                            */
-/*   The Class represents the smallest unit of work ( the Operation )           */
-/*   Each Operation is added to a single NSOperationQueue                       */
-/*   After each Operation is finished, it publishes a Notification              */
-/*   [queue setMaxConcurrentOperationCount:5];  makes it multi-threaded         */
-/********************************************************************************/
+/**
+*   Found Open Ports are stored in a Class NSMutableArray ( singleton )
+*   Class inherits from NSOperation
+*   The Class represents the smallest unit of work ( the Operation )
+*   Each Operation is added to a single NSOperationQueue
+*   After each Operation is finished, it publishes a Notification
+*   [queue setMaxConcurrentOperationCount:5];  makes it multi-threaded
+*/
 
 static NSString *YDhostname = @"127.0.0.1";
-static NSUInteger YDstartPort = 0;
-static NSUInteger const YDendPort = 2000;
 
 @interface YDOperation : NSOperation
-
 - (void) start;
 - (void) finished;
 
 @property (nonatomic, assign) NSUInteger port;
 @property (nonatomic, assign)  BOOL isExecuting, isFinished;
-@property (class, nonatomic, strong) NSMutableArray *openPorts;
-@property (class, nonatomic, strong) NSMutableArray *usedThreads;
+@property (class, atomic, strong) NSMutableArray *openPorts;
+@property (class, atomic, strong) NSMutableArray *usedThreads;
+@property (class, atomic, readonly) NSUInteger endPort;
+@property (class, atomic, readwrite) NSUInteger startPort;
 
 @end
 
@@ -40,6 +36,20 @@ static NSUInteger const YDendPort = 2000;
 
 static NSMutableArray *_openPorts;
 static NSMutableArray *_usedThreads;
+static NSUInteger _startPort = 0;
+static NSUInteger _endPort = 30;
+
++(NSUInteger)startPort{
+    return _startPort;
+}
+
++(NSUInteger)endPort{
+    return _endPort;
+}
+
++(void)setStartPort:(NSUInteger)startPort{
+    _startPort = startPort;
+}
 
 + (NSMutableArray *)usedThreads{
    return _usedThreads;
@@ -67,15 +77,14 @@ static NSMutableArray *_usedThreads;
      }];
 }
 
--(instancetype)init:(NSUInteger)enteredPort {
+-(instancetype)init {
     self = [super init];
     if (self) {
-        _port = enteredPort;
         return self;
     }
     return nil;
 }
-    
+   
 
 - (void)start {
     self.isExecuting = YES;
@@ -85,6 +94,7 @@ static NSMutableArray *_usedThreads;
     }
     [self finished];
 }
+
 
 -(BOOL)checkSocket {
     int result, sock;
@@ -125,13 +135,13 @@ int main() {
         [queue setMaxConcurrentOperationCount:5];
         
         do {
-            YDOperation *operation = [[YDOperation alloc] init:YDstartPort];
+            YDOperation *operation = [[YDOperation alloc] init];
             operation.queuePriority = NSOperationQueuePriorityNormal;
             operation.qualityOfService = NSOperationQualityOfServiceUserInteractive;
             [queue addOperation:operation];
             [operation setNotification];
-            YDstartPort++;
-        } while (YDstartPort < YDendPort);
+            YDOperation.startPort++;
+        } while (YDOperation.startPort < YDOperation.endPort);
         
         [queue waitUntilAllOperationsAreFinished];
         NSTimeInterval difference = [[NSDate date] timeIntervalSinceDate:startTime];

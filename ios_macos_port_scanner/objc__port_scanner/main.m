@@ -73,7 +73,7 @@ static NSUInteger _endPort = 2000;
     _openPorts = ports;
 }
 
-- (void) setNotification {
++ (void) setNotification {
     [[NSNotificationCenter defaultCenter] addObserverForName:@"foobar" object:self queue:nil usingBlock:^(NSNotification *note)
      {
         @synchronized(_usedThreads) {
@@ -123,7 +123,7 @@ static NSUInteger _endPort = 2000;
     [[NSNotificationCenter defaultCenter] postNotificationName:@"foobar" object:self userInfo:nil];
 }
 
-- (NSString *)getThreadID{
++ (NSString *)getThreadID{
     uint64_t tid;
     pthread_threadid_np(NULL, &tid);
     NSString *tidStr = [[NSString alloc] initWithFormat:@"%#08x", (unsigned int) tid];
@@ -139,14 +139,14 @@ int main() {
         [YDOperation setOpenPorts: [NSMutableArray array]];
         [YDOperation setUsedThreads:[NSMutableArray array]];
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];
-        [queue setMaxConcurrentOperationCount:3];
+        [queue setMaxConcurrentOperationCount:5];
+        [YDOperation setNotification];
         
         do {
             YDOperation *operation = [[YDOperation alloc] init];
             operation.queuePriority = NSOperationQueuePriorityNormal;
             operation.qualityOfService = NSOperationQualityOfServiceUserInteractive;
             [queue addOperation:operation];
-            [operation setNotification];
             YDOperation.startPort++;
         } while (YDOperation.startPort < YDOperation.endPort);
         

@@ -10,6 +10,7 @@
 
 
 @interface YDOperation : NSOperation{
+    @private
         NSUInteger _port;
 }
 
@@ -19,7 +20,7 @@
 @property (class, readwrite, nonnull) NSString *hostname;
 @property (class, atomic, readwrite) NSUInteger endPort;
 @property (class, atomic, readwrite) NSUInteger startPort;
-@property (readwrite) BOOL isExecuting, isFinished;
+@property (readwrite) BOOL isExecuting, isFinished, isAsynchronous;
 @end
 
 @implementation YDOperation
@@ -53,12 +54,12 @@ static NSUInteger _endPort = 2000;
 }
 
 
-+(NSString *)hostname{
++(NSString *) hostname{
     return _hostname;
 }
 
 
-+(NSUInteger)endPort{
++(NSUInteger) endPort{
     return _endPort;
 }
 
@@ -68,43 +69,33 @@ static NSUInteger _endPort = 2000;
 }
 
 
-+(NSUInteger)startPort{
++(NSUInteger) startPort{
     return _startPort;
 }
 
 
-+(void)setStartPort:(NSUInteger)startPort{
++(void) setStartPort:(NSUInteger)startPort{
     _startPort = startPort;
 }
 
-
-
-- (void) setNotification {
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"openSocketFoundNotification" object:self queue:nil usingBlock:^(NSNotification *note)
-     {
-        @synchronized([YDOperation openPorts]) {
-            [[YDOperation openPorts] addObject: [NSNumber numberWithUnsignedLong:self->_port]];
-        }
-     }];
-}
-
--(instancetype)init {
+-(instancetype) init {
     self = [super init];
     if (self) {
         _port = _startPort;
+        self.isAsynchronous = YES;
         return self;
     }
     return nil;
 }
    
 
-- (void)start {
+- (void) start {
     self.isExecuting = YES;
     self.isFinished = NO;
-    NSLog(@"Port=%lu, STARTED, Thread=%@ ", (unsigned long)_port, [YDOperation getThreadID]);
-    if ([self checkSocket])
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"openSocketFoundNotification" object:self userInfo:nil];
-    
+    if ([self checkSocket]){
+        NSNumber *openPort = [NSNumber numberWithUnsignedLong:_port];
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"openSocketFoundNotification" object:openPort userInfo:nil];
+    }
     @synchronized([YDOperation usedThreads]) {
         [[YDOperation usedThreads] addObject: [YDOperation getThreadID]];
     }
@@ -112,7 +103,7 @@ static NSUInteger _endPort = 2000;
 }
 
 
--(BOOL)checkSocket {
+-(BOOL) checkSocket {
     int result, sock;
     struct sockaddr_in sa = {0};
     sa.sin_family = AF_INET;
@@ -128,15 +119,13 @@ static NSUInteger _endPort = 2000;
 }
 
 
-- (void)finished {
+- (void) finished {
     self.isExecuting = NO;
     self.isFinished = YES;
-    NSLog(@"\t\t\t\tPort=%lu, FINISHED Thread=%@", (unsigned long)_port, [YDOperation getThreadID]);
-
 }
 
 
-+ (NSString *)getThreadID{
++ (NSString *) getThreadID{
     uint64_t tid;
     pthread_threadid_np(NULL, &tid);
     NSString *tidStr = [[NSString alloc] initWithFormat:@"%#08x", (unsigned int) tid];
@@ -144,15 +133,15 @@ static NSUInteger _endPort = 2000;
 }
 
 
-+ (NSString *)prettyStart{
++ (NSString *) prettyStart{
     return([NSString stringWithFormat:@"[*]Ports checked:  %lu\n\t\thostname:%@", YDOperation.endPort - YDOperation.startPort, YDOperation.hostname]);
 }
 
 
-+ (NSString *)prettySummary: (NSTimeInterval)timeDiff{
++ (NSString *) prettySummary: (NSTimeInterval)timeDiff{
 
     NSLog(@"[*]Threads used:  %lu", [[YDOperation usedThreads] count]);
-    
+
     for (id t in [YDOperation usedThreads])
         NSLog(@"\t\tThread=%@, Count=%lu", t, (unsigned long)[[YDOperation usedThreads] countForObject:t]);
 
@@ -175,12 +164,17 @@ int main() {
         
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];
         [queue setMaxConcurrentOperationCount:5];
+        [[NSNotificationCenter defaultCenter] addObserverForName:@"openSocketFoundNotification" object:nil queue:queue usingBlock:^(NSNotification *note)
+         {
+            @synchronized([YDOperation openPorts]) {
+                [[YDOperation openPorts] addObject: note.object];
+            }
+         }];
         
         do {
             YDOperation *operation = [[YDOperation alloc] init];
             operation.queuePriority = NSOperationQueuePriorityNormal;
             operation.qualityOfService = NSOperationQualityOfServiceUserInteractive;
-            [operation setNotification];
             [queue addOperation:operation];
             YDOperation.startPort++;
         } while (YDOperation.startPort < YDOperation.endPort);

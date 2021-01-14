@@ -43,6 +43,25 @@ I expected the `Objective-C` code to be quick, as it still used `Sockets()` but 
 
 [*]Finished in:  14.131 seconds
 ```
+### Concurrent Threads
+```
+Port=0, STARTED, Thread=0x066eec
+Port=1, STARTED, Thread=0x066eed
+Port=2, STARTED, Thread=0x066eee
+Port=3, STARTED, Thread=0x066eef
+Port=4, STARTED, Thread=0x066ef0
+				Port=1, FINISHED Thread=0x066eed
+				Port=2, FINISHED Thread=0x066eee
+				Port=3, FINISHED Thread=0x066eef
+Port=5, STARTED, Thread=0x066eed
+Port=6, STARTED, Thread=0x066eef
+				Port=4, FINISHED Thread=0x066ef0
+Port=7, STARTED, Thread=0x066ef0
+				Port=5, FINISHED Thread=0x066eed
+				Port=6, FINISHED Thread=0x066eef
+Port=9, STARTED, Thread=0x066eee
+Port=10, STARTED, Thread=0x066eef
+```
 ### Time Profiler
 Within `Xcode` select `Product\Profile` to launch `Instruments`. Then select `time profiler`:
 
@@ -63,41 +82,76 @@ There was no immediate evidence of a speed-up.  But, before I look at speed, the
 
 Issue  | Description
 --|--
-Retire `transient` Type |  Replace a `NSMutableArray` that was a "transient" structure to get data into a `NSCountedSet`.
-`Properties`|  Replace `Class Properties` to better enforce `encapsulation` [ by hiding more `instance variables` from the calling code.and
+Retire `transient` collections of objects |  Replace a `NSMutableArray` that was a "transient" structure to get data into a `NSMutableCountedSet`.
+`Properties`|  Replace `Class Properties` to better enforce `encapsulation` [ by hiding more `instance variables` from the calling code ]
 `Instance Methods`  |  Replace `getter` and `setter` with `methods`
 
 
-### Re-design 3
-
+#### Code style guides
 https://google.github.io/styleguide/objcguide.html
 
 https://github.com/raywenderlich/objective-c-style-guide#spacing
 
-My code was not completing.  It was getting stuck on this line:  `[queue waitUntilAllOperationsAreFinished];`
+#### Summary of redesign
+My code stopped completing.  It was getting stuck on this line:  `[queue waitUntilAllOperationsAreFinished];`
 
-Setting as breakpoint revealed:
+Setting a breakpoint revealed:
 ```
 (lldb) po [queue operationCount]
 30
 ```
-
+This caused memory to be written to disk and not freed:
 
 ![writing_to_disk](images/2021/01/writing-to-disk.png)
-### Re-design 4
-What about moving the code away from a `Class instance` and move to a `Block`?
 
-### Re-design 5
-The `Operations` themselves are `synchronous`. Does that mean it blocks all the other threads?  No. Reference below:
+The issue was `NSOperation`. I had to override the following:
+
+```
+isExecuting - read-only
+isFinished - read-only
+```
+### Finding bottlenecks
+Re-select `Time Profiler` and run the app.  You could observe:
+
+- Tasks were split across `machine CPUs`
+- But the threads appear to all send at the same time ( or were they waiting behind `locks`?)
+- Time to start a thread was costly
+- The `socket` call was expensive ( like not freeing )
+
+
+![analyze_in_instruments](images/2021/01/analyze-in-instruments.png)
+
+
+
+### Re-design 3
+The `Operations` themselves were `synchronous`. Does that mean it blocks all the other threads?  No. Reference below:
 
 >@property(readonly, getter=isAsynchronous) BOOL asynchronous;
 Discussion
 NO for operations that run synchronously on the current thread. The default value of this property is NO.
 
+I overrode `self.isAsynchronous = YES;` to check if there was a speed improvement. No.
+
+What about if I didn't have to `close` the `socket` so frequently?
+
+```
+sock = socket( AF_INET, SOCK_STREAM, 0 );
+
+for ( int p = START;  p <= END; p++ ){
+  //  try connect  
+}
+
+close ( sock );
+```
+
+### Re-design 4
+What about moving the code away from a `Class instance` and move to a `Block`?
+
+
 
 ### What about
-`NSPort`            ->
-`NSStream`          -> complex, when I only want to check whether a `port` is `open`.
-`NSSocketPort` -> only available on `macOS`.
-`TCP Half Open` scan ( for speed)
-`TCP Connect` for complete `TCP connection`
+- `NSPort`            ->
+- `NSStream`          -> complex, when I only want to check whether a `port` is `open`.
+ - `NSSocketPort` -> only available on `macOS`.
+ - `TCP Half Open` scan ( for speed)
+ - `TCP Connect` for complete `TCP connection`

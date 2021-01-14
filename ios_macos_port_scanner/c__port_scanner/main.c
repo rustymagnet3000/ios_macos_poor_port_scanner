@@ -26,14 +26,19 @@ main (int argc, char **argv)
 
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = inet_addr(HOSTNAME);
-
+    
     puts ("[*]scan started...");
-    for ( int i = START;  i <= END; i++ ){
-        sa.sin_port = htons( i );
+    for ( int port = START;  port <= END; port++ ){
         sock = socket( AF_INET, SOCK_STREAM, 0 );
-        result = connect( sock , ( struct sockaddr* ) &sa , sizeof sa );
+        sa.sin_port = htons( port );
+
+        int option_len;
+        struct linger l;
+        option_len = sizeof(l);
+        
+        result = connect ( sock , ( struct sockaddr* ) &sa , sizeof sa );
         if ( result == 0 ) {
-            printf( "[!]%i open port\n", i );
+            printf( "[!]%i open port\n", port );
             open_conns++;
         }
         else if ( result == -1 ) {
@@ -41,7 +46,7 @@ main (int argc, char **argv)
         }
         close ( sock );
     }
-
+    
     printf ("[*]Completed.\n\tOpen ports: %d\tRefused ports:%d\tUnknown response:%d\n", open_conns, refused_conns, unknown_conns);
     return 0;
 }

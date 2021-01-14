@@ -1,4 +1,5 @@
 @import Foundation;
+@import ObjectiveC.runtime;
 #import <arpa/inet.h>
 #include <pthread.h>
 
@@ -28,7 +29,7 @@
 #pragma mark: Default values. These Properties can be overidden
 static NSString *_hostname = @"127.0.0.1";
 static NSUInteger _startPort = 0;
-static NSUInteger _endPort = 2000;
+static NSUInteger _endPort = 50;
 
 +(NSMutableArray*) openPorts
 {
@@ -104,6 +105,7 @@ static NSUInteger _endPort = 2000;
 
 
 -(BOOL) checkSocket {
+
     int result, sock;
     struct sockaddr_in sa = {0};
     sa.sin_family = AF_INET;
@@ -138,7 +140,7 @@ static NSUInteger _endPort = 2000;
 }
 
 
-+ (NSString *) prettySummary: (NSTimeInterval)timeDiff{
++ (NSString *) prettySummary: (NSTimeInterval)timeDiff {
 
     NSLog(@"[*]Threads used:  %lu", [[YDOperation usedThreads] count]);
 
@@ -182,6 +184,14 @@ int main() {
         [queue waitUntilAllOperationsAreFinished];
         NSTimeInterval difference = [[NSDate date] timeIntervalSinceDate:startTime];
         NSLog( @"%@", [YDOperation prettySummary:difference] );
+        
+        Class YDOperationClass = objc_getClass("YDOperation");
+        SEL YDselector = @selector(checkSocket);
+        if ([YDOperationClass instancesRespondToSelector:YDselector]){
+            IMP checkSocketPtr = class_getMethodImplementation_stret(YDOperationClass, YDselector);
+            NSLog(@"🍭checkSocket() is at: %p", checkSocketPtr);
+            NSLog(@"🍭");
+        }
     }
 
     return 0;

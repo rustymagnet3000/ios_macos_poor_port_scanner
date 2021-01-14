@@ -73,12 +73,18 @@ This showed the `Heaviest Stack Trace`. Huh.  Something not related to the `port
 ![heaviest_stack_trace](images/2021/01/heaviest-stack-trace.png)
 
 ### Re-design 1
-An obvious improvement was to change the `Notification` to a `Class Function`. It was no longer called many times [ when a new class was created ].
+From this `stack trace`, the first improvement to make was changing the `Notification` so it wasn't called every time an `operation` was created.  
 
-![wait_until_ops_are_finished](images/2021/01/wait-until-ops-are-finished.png)
+I moved it to a `Class Function`. That felt clunky.  After some head scratching, I noticed you could attach the `notification` to the `queue`:
+
+```
+[[NSNotificationCenter defaultCenter] addObserverForName:@"openSocketFoundNotification" object:nil queue:queue usingBlock:^(NSNotification *note)
+```
 
 ### Re-design 2
-There was no immediate evidence of a speed-up.  But, before I look at speed, there were obvious `Objective-C` improvements to make:
+There was no immediate evidence of a speed-up.  `waiting` was now the `heaviest stack` item.  
+
+Before I look at speed, there were obvious `Objective-C` improvements to make:
 
 Issue  | Description
 --|--
@@ -110,25 +116,24 @@ The issue was `NSOperation`. I had to override the following:
 isExecuting - read-only
 isFinished - read-only
 ```
-### Finding bottlenecks
+### Re-design 3
+##### Finding bottlenecks
 Re-select `Time Profiler` and run the app.  You could observe:
 
 - Tasks were split across `machine CPUs`
 - But the threads appear to all send at the same time ( or were they waiting behind `locks`?)
 - Time to start a thread was costly
-- The `socket` call was expensive ( like not freeing )
+- The `socket` call was expensive
 
 
 ![analyze_in_instruments](images/2021/01/analyze-in-instruments.png)
 
 
-
-### Re-design 3
 The `Operations` themselves were `synchronous`. Does that mean it blocks all the other threads?  No. Reference below:
 
 >@property(readonly, getter=isAsynchronous) BOOL asynchronous;
-Discussion
-NO for operations that run synchronously on the current thread. The default value of this property is NO.
+
+>NO for operations that run synchronously on the current thread. The default value of this property is NO.
 
 I overrode `self.isAsynchronous = YES;` to check if there was a speed improvement. No.
 
@@ -143,6 +148,7 @@ for ( int p = START;  p <= END; p++ ){
 
 close ( sock );
 ```
+That did not work. But the opportunity to `re-use` the `socket` was an option.
 
 ### Re-design 4
 What about moving the code away from a `Class instance` and move to a `Block`?

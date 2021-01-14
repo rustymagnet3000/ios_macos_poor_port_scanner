@@ -101,6 +101,7 @@ static NSUInteger _endPort = 2000;
 - (void)start {
     self.isExecuting = YES;
     self.isFinished = NO;
+    NSLog(@"Port=%lu, STARTED, Thread=%@ ", (unsigned long)_port, [YDOperation getThreadID]);
     if ([self checkSocket])
         [[NSNotificationCenter defaultCenter] postNotificationName:@"openSocketFoundNotification" object:self userInfo:nil];
     
@@ -130,6 +131,8 @@ static NSUInteger _endPort = 2000;
 - (void)finished {
     self.isExecuting = NO;
     self.isFinished = YES;
+    NSLog(@"\t\t\t\tPort=%lu, FINISHED Thread=%@", (unsigned long)_port, [YDOperation getThreadID]);
+
 }
 
 

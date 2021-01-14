@@ -24,19 +24,24 @@ I expected the `Objective-C` code to be quick, as it still used `Sockets()` but 
 
 ### Results
 ```
-[*]Ports to check = 2000 on: 127.0.0.1
-[*]Open Ports (
-    ...,
-    ...
-)
-[*]Finished in: 15.104 seconds
+[*]Ports checked:  2000
+		hostname:127.0.0.1
+[*]main thread:  0x063d09
+[*]Threads used:  9
+		Thread=0x063e77, Count=285
+		Thread=0x063e7b, Count=226
+		Thread=0x063e76, Count=222
+		Thread=0x063e7a, Count=208
+		Thread=0x063e97, Count=132
+		Thread=0x063e75, Count=295
+		Thread=0x063e79, Count=254
+		Thread=0x063e7d, Count=141
+		Thread=0x063e78, Count=234
+[*]Open ports:  2
+		port=22
+		port=631
 
-[*]Thread=0xae9643, Count=218
-[*]Thread=0xae9634, Count=250
-[*]Thread=0xae9633, Count=368
-[*]Thread=0xae9636, Count=419
-[*]Thread=0xae9632, Count=353
-[*]Thread=0xae9635, Count=392
+[*]Finished in:  14.131 seconds
 ```
 ### Time Profiler
 Within `Xcode` select `Product\Profile` to launch `Instruments`. Then select `time profiler`:
@@ -64,19 +69,18 @@ Retire `transient` Type |  Replace a `NSMutableArray` that was a "transient" str
 
 
 ### Re-design 3
-By default all of my operations were `synchronous`.
-
-`operation.asynchronous`
-
-@property (readonly, getter=isAsynchronous) BOOL asynchronous
-
-All of our networking operations are going to be asynchronous so we will override this property to always return YES. Armed with this knowledge let's build a subclass of NSOperation
-
 
 https://google.github.io/styleguide/objcguide.html
 
 https://github.com/raywenderlich/objective-c-style-guide#spacing
 
+My code was not completing.  It was getting stuck on this line:  `[queue waitUntilAllOperationsAreFinished];`
+
+Setting as breakpoint revealed:
+```
+(lldb) po [queue operationCount]
+30
+```
 
 
 ![writing_to_disk](images/2021/01/writing-to-disk.png)

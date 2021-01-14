@@ -64,8 +64,31 @@ Retire `transient` Type |  Replace a `NSMutableArray` that was a "transient" str
 
 
 ### Re-design 3
+By default all of my operations were `synchronous`.
+
+`operation.asynchronous`
+
+@property (readonly, getter=isAsynchronous) BOOL asynchronous
+
+All of our networking operations are going to be asynchronous so we will override this property to always return YES. Armed with this knowledge let's build a subclass of NSOperation
+
+
+https://google.github.io/styleguide/objcguide.html
+
+https://github.com/raywenderlich/objective-c-style-guide#spacing
+
+
+
+![writing_to_disk](images/2021/01/writing-to-disk.png)
+### Re-design 4
 What about moving the code away from a `Class instance` and move to a `Block`?
 
+### Re-design 5
+The `Operations` themselves are `synchronous`. Does that mean it blocks all the other threads?  No. Reference below:
+
+>@property(readonly, getter=isAsynchronous) BOOL asynchronous;
+Discussion
+NO for operations that run synchronously on the current thread. The default value of this property is NO.
 
 
 ### What about

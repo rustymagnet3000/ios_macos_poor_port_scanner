@@ -10,21 +10,27 @@
 
 
 @interface YDOperation : NSOperation{
-    @protected
-        BOOL _isExecuting, _isFinished;
         NSUInteger _port;
 }
 
 - (void) start;
 - (void) finished;
 
-@property (class, readonly, nonnull) NSString *hostname;
+@property (class, readwrite, nonnull) NSString *hostname;
 @property (class, atomic, readwrite) NSUInteger endPort;
 @property (class, atomic, readwrite) NSUInteger startPort;
-
+//@property (readonly, getter=isExecuting) BOOL executing;
+//@property (readwrite, getter=isFinished) BOOL finished;
 @end
 
 @implementation YDOperation
+
+#pragma mark: Default values. These Properties can be overidden
+static NSString *_hostname = @"127.0.0.1";
+static NSUInteger _startPort = 0;
+static NSUInteger _endPort = 30;
+//@synthesize executing = _executing;
+//@synthesize finished = _finished;
 
 -(NSMutableArray*) openPorts
 {
@@ -35,36 +41,50 @@
     return _openPorts;
 }
 
--(NSMutableArray*) usedThreads
+//
+//-(NSMutableArray*) usedThreads
+//{
+//    static NSMutableArray *_usedThreads = nil;
+//    if (_usedThreads == nil)
+//        _usedThreads = [NSMutableArray array];
+//
+//    return _usedThreads;
+//}
+
++(NSCountedSet*) usedThreads
 {
-    static NSMutableArray *_usedThreads = nil;
+    static NSCountedSet *_usedThreads = nil;
     if (_usedThreads == nil)
-        _usedThreads = [NSMutableArray array];
+        _usedThreads = [NSCountedSet set];
 
     return _usedThreads;
 }
 
 
-static NSString *_hostname = @"127.0.0.1";
-// default values. These Properties can be overidden
-static NSUInteger _startPort = 0;
-static NSUInteger _endPort = 2000;
++(void) setHostname:(NSString *)hostname{
+    _hostname = hostname;
+}
+
 
 +(NSString *)hostname{
     return _hostname;
 }
 
+
 +(NSUInteger)endPort{
     return _endPort;
 }
+
 
 +(void) setEndPort:(NSUInteger)endPort{
     _endPort = endPort;
 }
 
+
 +(NSUInteger)startPort{
     return _startPort;
 }
+
 
 +(void)setStartPort:(NSUInteger)startPort{
     _startPort = startPort;
@@ -72,11 +92,11 @@ static NSUInteger _endPort = 2000;
 
 
 
-+ (void) setNotification {
-    [[NSNotificationCenter defaultCenter] addObserverForName:@"foobar" object:self queue:nil usingBlock:^(NSNotification *note)
+- (void) setNotification {
+    [[NSNotificationCenter defaultCenter] addObserverForName:@"openSocketFoundNotification" object:self queue:nil usingBlock:^(NSNotification *note)
      {
-        @synchronized(_usedThreads) {
-            [_usedThreads addObject:[self getThreadID]];
+        @synchronized([self openPorts]) {
+            [[self openPorts] addObject: [NSNumber numberWithUnsignedLong:self->_port]];
         }
      }];
 }
@@ -92,10 +112,13 @@ static NSUInteger _endPort = 2000;
    
 
 - (void)start {
-    _isExecuting = YES;
-    _isFinished = NO;
-    if ([self checkSocket]) {
-        [_openPorts addObject:[NSNumber numberWithUnsignedLong:_port]];
+    self.executing = YES;
+    _finished = NO;
+    if ([self checkSocket])
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"openSocketFoundNotification" object:self userInfo:nil];
+    
+    @synchronized([YDOperation usedThreads]) {
+        [[YDOperation usedThreads] addObject: [YDOperation getThreadID]];
     }
     [self finished];
 }
@@ -116,11 +139,12 @@ static NSUInteger _endPort = 2000;
     return NO;
 }
 
+
 - (void)finished {
-    _isExecuting = NO;
-    _isFinished = YES;
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"foobar" object:self userInfo:nil];
+    _executing = NO;
+    _finished = YES;
 }
+
 
 + (NSString *)getThreadID{
     uint64_t tid;
@@ -129,16 +153,18 @@ static NSUInteger _endPort = 2000;
     return tidStr;
 }
 
+
 + (NSString *)prettyStart{
     return([NSString stringWithFormat:@"[*]Ports to check = %lu on: %@", YDOperation.endPort - YDOperation.startPort, YDOperation.hostname]);
 }
 
+
 + (NSString *)prettySummary: (NSTimeInterval)timeDiff{
-    NSCountedSet *set = [[NSCountedSet alloc] initWithArray:YDOperation.usedThreads];
-    for (id t in set)
-        NSLog(@"[*]Thread=%@, Count=%lu", t, (unsigned long)[set countForObject:t]);
-    
-    return([NSString stringWithFormat:@"\n\n[*]Finished in: %.3f seconds\n", timeDiff]);
+
+    for (id t in [YDOperation usedThreads])
+        NSLog(@"\t\tThread=%@, Count=%lu", t, (unsigned long)[[YDOperation usedThreads] countForObject:t]);
+    NSLog(@"\t\tmain thread: %@", [NSThread mainThread]);
+    return([NSString stringWithFormat:@"[*]Finished in: %.3f seconds\n", timeDiff]);
 }
 
 
@@ -152,12 +178,12 @@ int main() {
         
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];
         [queue setMaxConcurrentOperationCount:5];
-        [YDOperation setNotification];
         
         do {
             YDOperation *operation = [[YDOperation alloc] init];
             operation.queuePriority = NSOperationQueuePriorityNormal;
             operation.qualityOfService = NSOperationQualityOfServiceUserInteractive;
+            [operation setNotification];
             [queue addOperation:operation];
             YDOperation.startPort++;
         } while (YDOperation.startPort < YDOperation.endPort);

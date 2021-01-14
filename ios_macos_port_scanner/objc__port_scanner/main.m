@@ -19,8 +19,7 @@
 @property (class, readwrite, nonnull) NSString *hostname;
 @property (class, atomic, readwrite) NSUInteger endPort;
 @property (class, atomic, readwrite) NSUInteger startPort;
-//@property (readonly, getter=isExecuting) BOOL executing;
-//@property (readwrite, getter=isFinished) BOOL finished;
+@property (readwrite) BOOL isExecuting, isFinished;
 @end
 
 @implementation YDOperation
@@ -28,11 +27,9 @@
 #pragma mark: Default values. These Properties can be overidden
 static NSString *_hostname = @"127.0.0.1";
 static NSUInteger _startPort = 0;
-static NSUInteger _endPort = 30;
-//@synthesize executing = _executing;
-//@synthesize finished = _finished;
+static NSUInteger _endPort = 2000;
 
--(NSMutableArray*) openPorts
++(NSMutableArray*) openPorts
 {
     static NSMutableArray *_openPorts = nil;
     if (_openPorts == nil)
@@ -40,16 +37,6 @@ static NSUInteger _endPort = 30;
 
     return _openPorts;
 }
-
-//
-//-(NSMutableArray*) usedThreads
-//{
-//    static NSMutableArray *_usedThreads = nil;
-//    if (_usedThreads == nil)
-//        _usedThreads = [NSMutableArray array];
-//
-//    return _usedThreads;
-//}
 
 +(NSCountedSet*) usedThreads
 {
@@ -95,8 +82,8 @@ static NSUInteger _endPort = 30;
 - (void) setNotification {
     [[NSNotificationCenter defaultCenter] addObserverForName:@"openSocketFoundNotification" object:self queue:nil usingBlock:^(NSNotification *note)
      {
-        @synchronized([self openPorts]) {
-            [[self openPorts] addObject: [NSNumber numberWithUnsignedLong:self->_port]];
+        @synchronized([YDOperation openPorts]) {
+            [[YDOperation openPorts] addObject: [NSNumber numberWithUnsignedLong:self->_port]];
         }
      }];
 }
@@ -112,8 +99,8 @@ static NSUInteger _endPort = 30;
    
 
 - (void)start {
-    self.executing = YES;
-    _finished = NO;
+    self.isExecuting = YES;
+    self.isFinished = NO;
     if ([self checkSocket])
         [[NSNotificationCenter defaultCenter] postNotificationName:@"openSocketFoundNotification" object:self userInfo:nil];
     
@@ -141,8 +128,8 @@ static NSUInteger _endPort = 30;
 
 
 - (void)finished {
-    _executing = NO;
-    _finished = YES;
+    self.isExecuting = NO;
+    self.isFinished = YES;
 }
 
 
@@ -155,16 +142,22 @@ static NSUInteger _endPort = 30;
 
 
 + (NSString *)prettyStart{
-    return([NSString stringWithFormat:@"[*]Ports to check = %lu on: %@", YDOperation.endPort - YDOperation.startPort, YDOperation.hostname]);
+    return([NSString stringWithFormat:@"[*]Ports checked:  %lu\n\t\thostname:%@", YDOperation.endPort - YDOperation.startPort, YDOperation.hostname]);
 }
 
 
 + (NSString *)prettySummary: (NSTimeInterval)timeDiff{
 
+    NSLog(@"[*]Threads used:  %lu", [[YDOperation usedThreads] count]);
+    
     for (id t in [YDOperation usedThreads])
         NSLog(@"\t\tThread=%@, Count=%lu", t, (unsigned long)[[YDOperation usedThreads] countForObject:t]);
-    NSLog(@"\t\tmain thread: %@", [NSThread mainThread]);
-    return([NSString stringWithFormat:@"[*]Finished in: %.3f seconds\n", timeDiff]);
+
+    NSLog(@"[*]Open ports:  %lu", [[YDOperation openPorts] count]);
+    for (id p in [YDOperation openPorts])
+        NSLog(@"\t\tport=%@", p);
+    
+    return([NSString stringWithFormat:@"\n[*]Finished in:  %.3f seconds\n", timeDiff]);
 }
 
 
@@ -174,6 +167,7 @@ int main() {
     @autoreleasepool {
         
         NSLog( @"%@", [YDOperation prettyStart] );
+        NSLog(@"[*]main thread:  %@", [YDOperation getThreadID]);
         NSDate *startTime = [NSDate date];
         
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];

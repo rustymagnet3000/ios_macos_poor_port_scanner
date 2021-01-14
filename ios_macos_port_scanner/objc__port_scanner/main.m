@@ -13,8 +13,6 @@
     @protected
         BOOL _isExecuting, _isFinished;
         NSUInteger _port;
-        NSMutableArray *_openPorts;
-        NSMutableArray *_usedThreads;
 }
 
 - (void) start;
@@ -24,17 +22,31 @@
 @property (class, atomic, readwrite) NSUInteger endPort;
 @property (class, atomic, readwrite) NSUInteger startPort;
 
-
 @end
 
 @implementation YDOperation
 
-static NSMutableArray *_openPorts;
-static NSMutableArray *_usedThreads;
+-(NSMutableArray*) openPorts
+{
+    static NSMutableArray *_openPorts = nil;
+    if (_openPorts == nil)
+        _openPorts = [NSMutableArray array];
 
-[_openPorts: [NSMutableArray array]];
-[self setUsedThreads:[NSMutableArray array]];
+    return _openPorts;
+}
+
+-(NSMutableArray*) usedThreads
+{
+    static NSMutableArray *_usedThreads = nil;
+    if (_usedThreads == nil)
+        _usedThreads = [NSMutableArray array];
+
+    return _usedThreads;
+}
+
+
 static NSString *_hostname = @"127.0.0.1";
+// default values. These Properties can be overidden
 static NSUInteger _startPort = 0;
 static NSUInteger _endPort = 2000;
 
@@ -116,12 +128,26 @@ static NSUInteger _endPort = 2000;
     NSString *tidStr = [[NSString alloc] initWithFormat:@"%#08x", (unsigned int) tid];
     return tidStr;
 }
+
++ (NSString *)prettyStart{
+    return([NSString stringWithFormat:@"[*]Ports to check = %lu on: %@", YDOperation.endPort - YDOperation.startPort, YDOperation.hostname]);
+}
+
++ (NSString *)prettySummary: (NSTimeInterval)timeDiff{
+    NSCountedSet *set = [[NSCountedSet alloc] initWithArray:YDOperation.usedThreads];
+    for (id t in set)
+        NSLog(@"[*]Thread=%@, Count=%lu", t, (unsigned long)[set countForObject:t]);
+    
+    return([NSString stringWithFormat:@"\n\n[*]Finished in: %.3f seconds\n", timeDiff]);
+}
+
+
 @end
 
 int main() {
     @autoreleasepool {
         
-        NSLog(@"[*]Ports to check = %lu on: %@", YDOperation.endPort - YDOperation.startPort, YDOperation.hostname);
+        NSLog( @"%@", [YDOperation prettyStart] );
         NSDate *startTime = [NSDate date];
         
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];
@@ -138,10 +164,7 @@ int main() {
         
         [queue waitUntilAllOperationsAreFinished];
         NSTimeInterval difference = [[NSDate date] timeIntervalSinceDate:startTime];
-
-        NSCountedSet *set = [[NSCountedSet alloc] initWithArray:YDOperation.usedThreads];
-        for (id t in set)
-            NSLog(@"[*]Thread=%@, Count=%lu", t, (unsigned long)[set countForObject:t]);
+        NSLog( @"%@", [YDOperation prettySummary:difference] );
     }
 
     return 0;

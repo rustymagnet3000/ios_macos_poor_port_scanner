@@ -11,7 +11,7 @@
 
 
 @interface YDOperation : NSOperation{
-    @private
+    @protected
         NSUInteger _port;
 }
 
@@ -162,6 +162,13 @@ int main() {
         
         NSLog( @"%@", [YDOperation prettyStart] );
         NSLog(@"[*]main thread:  %@", [YDOperation getThreadID]);
+        Class YDOperationClass = objc_getClass("YDOperation");
+        SEL YDselector = @selector(checkSocket);
+        if ([YDOperationClass instancesRespondToSelector:YDselector]){
+            IMP checkSocketPtr = class_getMethodImplementation_stret(YDOperationClass, YDselector);
+            NSLog(@"🍭checkSocket() is at: %p", checkSocketPtr);
+            NSLog(@"🍭");
+        }
         NSDate *startTime = [NSDate date];
         
         NSOperationQueue *queue = [[NSOperationQueue alloc] init];
@@ -184,14 +191,7 @@ int main() {
         [queue waitUntilAllOperationsAreFinished];
         NSTimeInterval difference = [[NSDate date] timeIntervalSinceDate:startTime];
         NSLog( @"%@", [YDOperation prettySummary:difference] );
-        
-        Class YDOperationClass = objc_getClass("YDOperation");
-        SEL YDselector = @selector(checkSocket);
-        if ([YDOperationClass instancesRespondToSelector:YDselector]){
-            IMP checkSocketPtr = class_getMethodImplementation_stret(YDOperationClass, YDselector);
-            NSLog(@"🍭checkSocket() is at: %p", checkSocketPtr);
-            NSLog(@"🍭");
-        }
+    
     }
 
     return 0;
